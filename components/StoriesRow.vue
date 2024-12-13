@@ -276,24 +276,28 @@ const handleImageError = (event) => {
     event.target.src = 'https://via.placeholder.com/150';
 };
 
-// Création de story
 const createStory = () => {
     if (selectedFile.value) {
-        const newStory = {
-            id: Date.now(),
-            userName: 'Karima LACENE',
-            userImage: previewUrl.value,
-            seen: false,
-            items: [{
+        // Convertir l'image en base64 avant de la sauvegarder
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const newStory = {
                 id: Date.now(),
-                type: 'image',
-                media: previewUrl.value,
-                timestamp: new Date().toISOString()
-            }]
+                seen: false,
+                userName: 'Karima LACENE',
+                userImage: '/karima.png', // Assurez-vous que cette image existe dans votre dossier public
+                items: [{
+                    id: Date.now(),
+                    type: 'image',
+                    media: e.target.result, // Utiliser l'image en base64
+                    timestamp: new Date().toISOString()
+                }]
+            };
+            
+            emit('storyCreated', newStory);
+            closeCreator();
         };
-        
-        emit('storyCreated', newStory);
-        closeCreator();
+        reader.readAsDataURL(selectedFile.value);
     }
 };
 
