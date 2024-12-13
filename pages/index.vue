@@ -21,14 +21,14 @@
                                 <div class="w-full mt-1">Loading...</div>
                             </div>
                         </div>
-                        <div v-if="!isLoading && !userStore.posts.length" class="mt-20 w-full flex items-center justify-center mx-auto">
+                        <div v-if="!isLoading && !posts.length" class="mt-20 w-full flex items-center justify-center mx-auto">
                             <div class="text-white mx-auto flex flex-col items-center justify-center">
                                 <Icon name="tabler:mood-empty" size="50" color="#ffffff" />
                                 <div class="w-full">Make the first post!</div>
                             </div>
                         </div>
                     </client-only>
-                    <div v-if="userStore.posts.length > 0" v-for="post in userStore.posts" :key="post.id" class="mb-4">
+                    <div v-if="posts.length > 0" v-for="post in posts" :key="post.id" class="mb-4">
                         <Post 
                             :post="post" 
                             @isDeleted="removePost"
@@ -52,13 +52,14 @@
 
 <script setup>
 import MainLayout from '~/layouts/MainLayout.vue';
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { storeToRefs } from 'pinia';
 import { useUserStore } from '~/stores/user';
 import { Icon } from '@iconify/vue';
 import Post from '~/components/Post.vue';
 
 const userStore = useUserStore();
+const { posts } = storeToRefs(userStore);
 const isLoading = ref(true);
 const stories = ref([]);
 const showStoriesViewer = ref(false);
@@ -67,10 +68,18 @@ const currentStoryIndex = ref(0);
 // Gestion des posts
 const removePost = (postId) => {
     userStore.deletePost(postId);
+    saveToLocalStorage();
 };
 
 const updatePost = (updatedPost) => {
     userStore.updatePost(updatedPost);
+};
+
+// Sauvegarde dans le localStorage
+const saveToLocalStorage = () => {
+    if (process.client) {
+        localStorage.setItem('posts', JSON.stringify(posts.value));
+    }
 };
 
 // Gestion des stories
@@ -94,7 +103,6 @@ const deleteStory = (storyId) => {
         saveStories();
         showStoriesViewer.value = false;
         
-        // Handle edge case when deleting the last story
         if (stories.value.length === 0) {
             currentStoryIndex.value = 0;
         } else if (currentStoryIndex.value >= stories.value.length) {
@@ -121,10 +129,14 @@ const cleanupExpiredStories = () => {
     saveStories();
 };
 
-onMounted(() => {
+// Initialisation des données
+const initializeData = () => {
     if (process.client) {
         // Chargement des posts
         const storedPosts = JSON.parse(localStorage.getItem('posts')) || [];
+        storedPosts.forEach(post => {
+            if (!post.comments) post.comments = [];
+        });
         userStore.setPosts(storedPosts);
 
         // Chargement des stories
@@ -132,8 +144,13 @@ onMounted(() => {
         stories.value = storedStories;
         
         isLoading.value = false;
+    }
+};
 
-        // Démarrage du nettoyage périodique des stories
+onMounted(() => {
+    initializeData();
+    // Démarrage du nettoyage périodique des stories
+    if (process.client) {
         setInterval(cleanupExpiredStories, 60 * 60 * 1000);
     }
 });

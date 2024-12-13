@@ -96,22 +96,18 @@
                     <div class="flex items-center gap-6 mt-4 ml-2">
                         <button 
                             :disabled="isLike"
-                            @click="toggleLike" 
-                            class="flex items-center gap-1"
+                            @click="toggleLike"
+                            class="flex items-center gap-2 hover:bg-gray-800 rounded-full p-2 transition-colors duration-200"
+                            :class="{ 'text-pink-600 bg-gray-800/50': props.post.userHasLiked, 'text-gray-400': !props.post.userHasLiked }"
                         >
                             <Icon 
-                                v-if="!hasLikedComputed"
-                                class="p-1 text-white hover:bg-gray-800 rounded-full cursor-pointer" 
-                                name="mdi:cards-heart-outline" 
-                                size="28"
+                                :name="props.post.userHasLiked ? 'mdi:heart' : 'mdi:heart-outline'"
+                                :color="props.post.userHasLiked ? '#db2777' : '#ffffff'"
+                                size="24"
                             />
-                            <Icon 
-                                v-else
-                                class="p-1 text-red-500 hover:bg-gray-800 rounded-full cursor-pointer" 
-                                name="mdi:cards-heart" 
-                                size="28"
-                            />
-                            <span class="text-sm text-gray-400">{{ post.likes || 0 }}</span>
+                            <span :class="{ 'text-pink-600': props.post.userHasLiked, 'text-gray-400': !props.post.userHasLiked }">
+                                {{ props.post.likes || 0 }}
+                            </span>
                         </button>
 
                         <button 
@@ -123,7 +119,7 @@
                                 name="material-symbols:comment-outline" 
                                 size="28"
                             />
-                            <span class="text-sm text-gray-400">{{ comments.length }}</span>
+                            <span class="text-sm text-gray-400">{{ post.comments?.length || 0 }}</span>
                         </button>
 
                         <!-- Bouton Partager -->
@@ -140,13 +136,14 @@
                     </div>
 
                     <!-- Liste des commentaires -->
-                    <div v-if="comments.length > 0" class="mt-4 space-y-2">
-                        <div v-for="comment in comments" :key="comment.id" class="flex items-start gap-2 ml-2">
+                    <div v-if="post.comments?.length > 0" class="mt-4 space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                        <div v-for="comment in post.comments" :key="comment.id" class="flex items-start gap-2 ml-2">
                             <img class="rounded-full h-[25px]" :src="comment.userImage" alt="User Image">
                             <div v-if="!comment.isEditing" class="bg-neutral-900 rounded-lg p-2 flex-1 relative group">
                                 <div class="text-white text-sm font-semibold">{{ comment.userName }}</div>
                                 <div class="text-gray-300 text-sm">{{ comment.text }}</div>
-                                <div class="hidden group-hover:block absolute top-2 right-2">
+                                <div v-if="comment.userName === userStore.currentUser.name" 
+                                     class="hidden group-hover:block absolute top-2 right-2">
                                     <button 
                                         @click="toggleCommentMenu(comment.id)"
                                         class="text-gray-400 hover:text-white p-1"
@@ -199,7 +196,7 @@
 
                     <!-- Input nouveau commentaire -->
                     <div v-if="showCommentInput" class="mt-4 flex items-center gap-2 ml-2 mb-4">
-                        <img class="rounded-full h-[30px]" :src="post.image" alt="Current User">
+                        <img class="rounded-full h-[30px]" :src="userStore.currentUser.image" alt="Current User">
                         <div class="flex-1 relative">
                             <input 
                                 v-model="newComment"
@@ -289,21 +286,26 @@
         </div>
     </div>
 </template>
-
 <script setup>
 import { ref, computed } from 'vue';
 import { defineProps, defineEmits } from 'vue';
+import { useUserStore } from '~/stores/user';
 
-const props = defineProps({ post: Object });
-const emit = defineEmits(['isDeleted', 'isUpdated']);
+const userStore = useUserStore();
+const props = defineProps({
+    post: {
+        type: Object,
+        required: true
+    }
+});
+const emit = defineEmits(['isUpdated']);
 
 // États
 const isMenu = ref(false);
 const isDeleting = ref(false);
-const isLike = ref(false);
+const isLiking = ref(false);
 const showCommentInput = ref(false);
 const newComment = ref('');
-const comments = ref([]);
 const isEditing = ref(false);
 const editedText = ref('');
 const showDeleteModal = ref(false);
@@ -413,17 +415,24 @@ const confirmDelete = () => {
 
 // Gestion des likes
 const toggleLike = () => {
+    if (isLiking.value) return; // Empêche les clics multiples rapides
+    
+    isLiking.value = true;
+    setTimeout(() => {
+        isLiking.value = false;
+    }, 500); // Délai de 500ms avant de permettre un nouveau like
+
     if (!props.post.likes) props.post.likes = 0;
 
-    if (hasLikedComputed.value) {
-        props.post.likes = Math.max(0, props.post.likes - 1);
-        props.post.userHasLiked = false;
-    } else {
-        props.post.likes += 1;
-        props.post.userHasLiked = true;
-    }
-};
+    const newLikeState = !props.post.userHasLiked;
+    const updatedPost = {
+        ...props.post,
+        likes: props.post.likes + (newLikeState ? 1 : -1),
+        userHasLiked: newLikeState
+    };
 
+    emit('isUpdated', updatedPost);
+};
 // Gestion du partage
 const copyToClipboard = async () => {
     try {
@@ -448,7 +457,8 @@ const shareVia = (platform) => {
 
 // Gestion des commentaires
 const toggleCommentMenu = (commentId) => {
-    comments.value = comments.value.map(comment => ({
+    if (!props.post.comments) return;
+    props.post.comments = props.post.comments.map(comment => ({
         ...comment,
         showMenu: comment.id === commentId ? !comment.showMenu : false
     }));
@@ -461,8 +471,8 @@ const editComment = (comment) => {
 };
 
 const saveCommentEdit = (comment) => {
-    if (comment.editText.trim()) {
-        comment.text = comment.editText;
+    if (comment.editText?.trim()) {
+        userStore.updateComment(props.post.id, comment.id, comment.editText);
         comment.isEditing = false;
         addNotification('Commentaire modifié', 'success');
     }
@@ -475,23 +485,20 @@ const cancelCommentEdit = (comment) => {
 
 const deleteComment = (comment) => {
     if (confirm('Voulez-vous vraiment supprimer ce commentaire ?')) {
-        comments.value = comments.value.filter(c => c.id !== comment.id);
+        userStore.deleteComment(props.post.id, comment.id);
         addNotification('Commentaire supprimé', 'success');
     }
 };
 
 const addComment = () => {
     if (newComment.value.trim()) {
-        comments.value.push({
-            id: Date.now(),
+        const comment = {
             text: newComment.value,
-            userName: props.post.name,
-            userImage: props.post.image,
-            timestamp: new Date(),
-            isEditing: false,
-            showMenu: false,
-            editText: ''
-        });
+            userName: userStore.currentUser.name,
+            userImage: userStore.currentUser.image
+        };
+        
+        userStore.addCommentToPost(props.post.id, comment);
         newComment.value = '';
         showCommentInput.value = false;
         addNotification('Commentaire ajouté', 'success');

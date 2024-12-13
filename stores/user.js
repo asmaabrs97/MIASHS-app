@@ -14,28 +14,46 @@ export const useUserStore = defineStore('user', {
 
   actions: {
     addPost(post) {
-      this.posts.unshift(post);
+      const newPost = {
+        ...post,
+        comments: [],
+        likes: 0,
+        userHasLiked: false
+      };
+      this.posts.unshift(newPost);
       if (process.client) {
         localStorage.setItem('posts', JSON.stringify(this.posts));
       }
     },
 
     setPosts(posts) {
-      this.posts = posts;
+      this.posts = posts.map(post => ({
+        ...post,
+        comments: post.comments || [],
+        likes: post.likes || 0,
+        userHasLiked: post.userHasLiked || false
+      }));
       if (process.client) {
-        localStorage.setItem('posts', JSON.stringify(posts));
+        localStorage.setItem('posts', JSON.stringify(this.posts));
       }
     },
 
     updatePost(updatedPost) {
       const index = this.posts.findIndex(post => post.id === updatedPost.id);
       if (index !== -1) {
-        this.posts[index] = updatedPost;
-        if (process.client) {
-          localStorage.setItem('posts', JSON.stringify(this.posts));
-        }
+          this.posts[index] = {
+              ...this.posts[index],
+              ...updatedPost,
+              comments: updatedPost.comments || this.posts[index].comments || [],
+              likes: updatedPost.likes || 0,
+              userHasLiked: updatedPost.userHasLiked
+          };
+          if (process.client) {
+              localStorage.setItem('posts', JSON.stringify(this.posts));
+          }
       }
     },
+    
 
     deletePost(postId) {
       this.posts = this.posts.filter(post => post.id !== postId);
@@ -50,7 +68,9 @@ export const useUserStore = defineStore('user', {
         if (!post.likes) post.likes = 0;
         post.likes += increment ? 1 : -1;
         post.userHasLiked = increment;
-        localStorage.setItem('posts', JSON.stringify(this.posts));
+        if (process.client) {
+          localStorage.setItem('posts', JSON.stringify(this.posts));
+        }
       }
     },
 
@@ -58,12 +78,46 @@ export const useUserStore = defineStore('user', {
       const post = this.posts.find(p => p.id === postId);
       if (post) {
         if (!post.comments) post.comments = [];
-        post.comments.push(comment);
-        localStorage.setItem('posts', JSON.stringify(this.posts));
+        const newComment = {
+          id: Date.now(),
+          ...comment,
+          timestamp: new Date().toISOString(),
+          isEditing: false,
+          showMenu: false,
+          editText: ''
+        };
+        post.comments.push(newComment);
+        if (process.client) {
+          localStorage.setItem('posts', JSON.stringify(this.posts));
+        }
       }
     },
 
-    // Nouvelles actions pour les stories
+    updateComment(postId, commentId, newText) {
+      const post = this.posts.find(p => p.id === postId);
+      if (post && post.comments) {
+        const comment = post.comments.find(c => c.id === commentId);
+        if (comment) {
+          comment.text = newText;
+          comment.editedAt = new Date().toISOString();
+          if (process.client) {
+            localStorage.setItem('posts', JSON.stringify(this.posts));
+          }
+        }
+      }
+    },
+
+    deleteComment(postId, commentId) {
+      const post = this.posts.find(p => p.id === postId);
+      if (post && post.comments) {
+        post.comments = post.comments.filter(c => c.id !== commentId);
+        if (process.client) {
+          localStorage.setItem('posts', JSON.stringify(this.posts));
+        }
+      }
+    },
+
+    // Stories management
     addStory(story) {
       this.stories.unshift({
         ...story,
@@ -103,16 +157,15 @@ export const useUserStore = defineStore('user', {
       }
     },
 
-    // Initialisation des données depuis le localStorage
     initializeStore() {
       if (process.client) {
-        const savedStories = localStorage.getItem('stories');
-        if (savedStories) {
-          this.stories = JSON.parse(savedStories);
-        }
         const savedPosts = localStorage.getItem('posts');
         if (savedPosts) {
           this.posts = JSON.parse(savedPosts);
+        }
+        const savedStories = localStorage.getItem('stories');
+        if (savedStories) {
+          this.stories = JSON.parse(savedStories);
         }
       }
     }

@@ -16,6 +16,6 @@ export default defineNuxtConfig({
   devtools: { enabled: false },
 
   devServer: {
-    port: 4005 // ou n'importe quel autre port
+    port: 4009 // ou n'importe quel autre port
   }
 });

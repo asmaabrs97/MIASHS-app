@@ -1,0 +1,100 @@
+/* Animations globales */
+@keyframes like-animation {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+@keyframes slide-up {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Classes d'utilité */
+.animate-like {
+  animation: like-animation 0.3s ease-in-out;
+}
+
+.animate-slide-up {
+  animation: slide-up 0.3s ease-out;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+/* Styles Instagram */
+.instagram-gradient {
+  background: linear-gradient(45deg, #405DE6, #5851DB, #833AB4, #C13584, #E1306C, #FD1D1D);
+}
+
+.story-gradient {
+  background: linear-gradient(45deg, #FFD600, #FF7A00, #FF0069, #D300C5);
+}
+
+/* Styles modernes */
+.glass-effect {
+  backdrop-filter: blur(10px);
+  background-color: rgba(0, 0, 0, 0.8);
+}
+
+.hover-scale {
+  transition: transform 0.2s ease;
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+/* Personnalisation de la scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #666;
+}
+
+/* Style pour les conteneurs avec défilement */
+.scroll-container {
+  scrollbar-width: thin;
+  scrollbar-color: #444 #1a1a1a;
+}
+
+/* Styles des boutons */
+.instagram-button {
+  background: linear-gradient(45deg, #405DE6, #5851DB, #833AB4, #C13584);
+  transition: all 0.3s ease;
+}
+
+.instagram-button:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* Styles des cartes */
+.instagram-card {
+  border: 1px solid #262626;
+  background: #000;
+  transition: transform 0.3s ease;
+}
+
+.instagram-card:hover {
+  transform: translateY(-2px);
+}

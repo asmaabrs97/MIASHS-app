@@ -3,9 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "nuxt dev --port 4005",
+    "dev": "nuxt dev --port 4009",
     "build": "nuxt build",
-    "start": "nuxt start --port 4005",
+    "start": "nuxt start --port 4009",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare"
